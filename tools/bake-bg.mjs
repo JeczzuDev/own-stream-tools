@@ -36,6 +36,7 @@ const DEFAULT_FILES = [
   "dark_bg.html", "red_bg.html", "red_blue_bg.html", "orange_bg.html",
   "pink_bg.html", "wc2026_bg.html", "custom_bg.html",
   { file: "index.html", name: "blue_bg" },
+  "gray_bg.html", "gray_flat_bg.html",
 ];
 
 /* ------------------------------- CLI ------------------------------- */

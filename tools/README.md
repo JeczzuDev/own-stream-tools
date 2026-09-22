@@ -25,8 +25,8 @@ Periodo real de loop de cada archivo, tal como están hoy:
 
 | Archivo | Periodo real |
 |---|---|
-| `dark_bg` | 5 min |
-| `red_bg`, `red_blue_bg`, `orange_bg`, `pink_bg`, `index` | 30 min |
+| `dark_bg`, `gray_flat_bg` | 5–10 min |
+| `red_bg`, `red_blue_bg`, `orange_bg`, `pink_bg`, `index`, `gray_bg` | 30 min |
 | `wc2026_bg` | 154 horas |
 | `custom_bg` | 1001 horas |
 
@@ -63,7 +63,7 @@ así que los HTML siguen sirviendo para editar en vivo.
 ```bash
 cd tools && npm install          # solo la primera vez (playwright-core)
 
-node tools/bake-bg.mjs                                   # los 7, ajustes por defecto
+node tools/bake-bg.mjs                                   # todos, ajustes por defecto
 node tools/bake-bg.mjs red_bg.html --shards 6
 node tools/bake-bg.mjs --loop 240 --fps 60 --crf 16
 ```
@@ -113,6 +113,42 @@ Reemplazar cada Browser Source por un **Media Source**:
 - **Use hardware decoding when available** ✅ — NVDEC en la RTX 3060
 - Para usarlo en varias escenas, **Add Existing Source** en vez de duplicarlo:
   una sola instancia en memoria
+
+## Variantes neutras tintables en OBS
+
+`gray_bg.html` y `gray_flat_bg.html` son la versión blanco/gris de `index.html`,
+pensadas para recolorear desde OBS en vez de tener un archivo por color.
+
+**Cómo tintarlas:** filtro **Color Correction** sobre el Media Source, y poner el
+color deseado en el campo **Color**. Ese campo multiplica: el blanco toma el
+tinte a full y cada capa más oscura queda como un tono más profundo del mismo
+color.
+
+**El mapeo tonal.** Desaturar el azul original no sirve: su paleta vive entre
+17 % y 34 % de gris, y multiplicar eso daría casi negro. Los cinco niveles
+conservan el espaciado L\* exacto del original (19.9 puntos), reubicado para que
+el cielo caiga en blanco puro:
+
+| Original | Gris | L\* |
+|---|---|---|
+| `#0057a8` (cielo) | `#ffffff` | 100.0 |
+| `#004c93` | `#f1f1f1` | 95.2 |
+| `#00417e` | `#e3e3e3` | 90.3 |
+| `#003669` | `#d5d5d5` | 85.3 |
+| `#002b54` | `#c7c7c7` | 80.1 |
+
+**Cuál usar:**
+
+- `gray_bg` conserva el drift animado de los degradados, así que respira igual
+  que el resto de la familia. Es el equivalente directo del original.
+- `gray_flat_bg` le da un nivel sólido a cada forma, así que las capas se
+  separan más y los cinco tonos quedan netos pase lo que pase. Pesa menos y es
+  lo que necesitás si algún día querés un LUT que mande cada capa a un tono
+  distinto.
+
+**Un detalle del multiply:** comprime el rango hacia el color del tinte, así que
+el resultado queda algo más plano que el azul original. Si querés recuperar esa
+profundidad, subí **Contrast** en el mismo filtro Color Correction.
 
 ## Re-hornear `custom_bg` con otra paleta
 

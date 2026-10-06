@@ -18,7 +18,7 @@ import { createInjector } from './actions/input.js';
 import { parseHotkey, MEDIA_VK, VOLUME_VK } from './actions/keys.js';
 import { ObsClient, collectInterests } from './actions/obs.js';
 import { createApiHandler } from './api.js';
-import { isButton, type Button } from './schema.js';
+import { isButton, sceneList, type Button } from './schema.js';
 import { log } from './log.js';
 
 const VERSION = '1.0.0';
@@ -78,7 +78,7 @@ dispatcher.register('media', async (action) => injector.tapKey(MEDIA_VK[action.k
 dispatcher.register('volume', async (action) => injector.tapKey(VOLUME_VK[action.op], action.steps));
 dispatcher.register('obs.scene', (action) => obsClient.setScene(action.scene));
 dispatcher.register('obs.sourceVisibility', (action) =>
-    obsClient.setSourceVisibility(action.scene, action.source, action.visible)
+    obsClient.setSourceVisibility(sceneList(action.scene), action.source, action.visible)
 );
 dispatcher.register('obs.filter', (action) => obsClient.setFilter(action.source, action.filter, action.enabled));
 dispatcher.register('obs.mute', (action) => obsClient.setMute(action.input, action.mute));

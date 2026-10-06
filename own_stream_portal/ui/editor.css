@@ -430,6 +430,17 @@ textarea {
     margin-top: 8px;
 }
 
+.scene-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.scene-row > div {
+    flex: 1;
+}
+
 .swatch-row {
     display: flex;
     gap: 6px;

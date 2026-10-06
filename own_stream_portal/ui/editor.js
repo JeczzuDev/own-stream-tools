@@ -135,7 +135,10 @@ function actionSummary(action) {
     if (!action) return '';
     switch (action.type) {
         case 'obs.scene': return `→ ${action.scene || '?'}`;
-        case 'obs.sourceVisibility': return `${action.source || '?'} = ${visLabel(action.visible)}`;
+        case 'obs.sourceVisibility': {
+            const n = Array.isArray(action.scene) ? action.scene.length : 1;
+            return `${action.source || '?'} = ${visLabel(action.visible)}${n > 1 ? ` (${n} escenas)` : ''}`;
+        }
         case 'obs.filter': return `${action.filter || '?'} = ${visLabel(action.enabled)}`;
         case 'obs.mute': return `${action.input || '?'}`;
         case 'obs.stream': return `stream: ${action.op}`;
@@ -495,14 +498,10 @@ function renderActionFields(action) {
             break;
 
         case 'obs.sourceVisibility': {
-            const sources = obs.sceneSources[action.scene] || allSources();
-            /* build the source combo first so the scene field can refresh its
+            /* build the source combo first so the scene fields can refresh its
              * suggestions in place (no re-render → the input keeps focus) */
-            const srcCombo = comboInput(action.source, sources, (v) => { action.source = v; markDirty(); renderButtons(); });
-            box.append(field('Escena', comboInput(action.scene, obs.scenes, (v) => {
-                action.scene = v; markDirty(); renderButtons();
-                updateDatalist(srcCombo, obs.sceneSources[v] || allSources());
-            })));
+            const srcCombo = comboInput(action.source, sourcesInScenes(sceneArray(action.scene)), (v) => { action.source = v; markDirty(); renderButtons(); });
+            box.append(sceneListField(action, srcCombo));
             box.append(field('Fuente', srcCombo));
             box.append(field('Visibilidad', triSelect(action.visible, ['Alternar', 'Mostrar', 'Ocultar'], (v) => { action.visible = v; markDirty(); })));
             break;
@@ -587,6 +586,62 @@ function renderActionFields(action) {
             break;
     }
     return box;
+}
+
+/* obs.sourceVisibility `scene` is a string (one scene) or an array (several).
+ * The editor works on arrays and writes back a plain string for one scene,
+ * so single-scene configs stay unchanged on disk. */
+const sceneArray = (scene) => (Array.isArray(scene) ? scene : [scene ?? '']);
+const sceneValue = (list) => (list.length === 1 ? list[0] : list);
+
+/* union of the sources in the given scenes (all sources if none known) */
+function sourcesInScenes(scenes) {
+    const set = new Set();
+    for (const s of scenes) for (const src of obs.sceneSources[s] || []) set.add(src);
+    return set.size ? [...set].sort() : allSources();
+}
+
+function sceneListField(action, srcCombo) {
+    const scenes = sceneArray(action.scene);
+    const commit = () => { action.scene = sceneValue(scenes); markDirty(); renderButtons(); };
+    const rerender = () => { commit(); renderEditor(); };
+
+    const wrap = el('div', { class: 'field' },
+        el('span', {}, scenes.length > 1 ? `Escenas (${scenes.length})` : 'Escena'));
+    scenes.forEach((scene, i) => {
+        wrap.append(el('div', { class: 'scene-row' },
+            comboInput(scene, obs.scenes, (v) => {
+                scenes[i] = v;
+                commit();
+                updateDatalist(srcCombo, sourcesInScenes(scenes));
+            }),
+            scenes.length > 1
+                ? el('button', { class: 'btn btn-sm btn-ghost', title: 'Quitar escena', onclick: () => { scenes.splice(i, 1); rerender(); } }, '✕')
+                : null
+        ));
+    });
+
+    /* scenes (from the live OBS inventory) that contain the chosen source */
+    const containing = () => obs.scenes.filter((s) => (obs.sceneSources[s] || []).includes(action.source));
+    wrap.append(el('div', { class: 'row', style: 'margin-top:4px' },
+        el('button', { class: 'btn btn-sm', onclick: () => { scenes.push(''); rerender(); } }, '+ Escena'),
+        obs.connected
+            ? el('button', {
+                class: 'btn btn-sm btn-ghost', title: 'Usar todas las escenas donde está esta fuente',
+                onclick: () => {
+                    const found = containing();
+                    if (!action.source || !found.length) { showToast('Elige primero una fuente que exista en OBS.', 'error'); return; }
+                    scenes.splice(0, scenes.length, ...found);
+                    rerender();
+                    showToast(`${found.length} escena(s) con "${action.source}".`, 'ok');
+                }
+            }, 'Todas con la fuente')
+            : null
+    ));
+    if (scenes.length > 1) {
+        wrap.append(el('p', { class: 'hint' }, 'Se aplica en todas. "Alternar" lee la primera escena y deja las demás igual.'));
+    }
+    return wrap;
 }
 
 function rawParamsField(action) {

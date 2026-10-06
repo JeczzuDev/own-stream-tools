@@ -20,9 +20,13 @@ const obsScene = z.object({
     scene: z.string().min(1)
 });
 
+/* One scene name, or several: the same source is shown/hidden in all of
+ * them at once (toggle reads the first scene and syncs the rest). */
+const oneOrManyScenes = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
+
 const obsSourceVisibility = z.object({
     type: z.literal('obs.sourceVisibility'),
-    scene: z.string().min(1),
+    scene: oneOrManyScenes,
     source: z.string().min(1),
     visible: toggleOrBool.default('toggle')
 });
@@ -236,6 +240,11 @@ export type Button = Extract<Cell, { id: string }>;
 
 export function isButton(cell: Cell): cell is Button {
     return 'id' in cell;
+}
+
+/* Normalizes obs.sourceVisibility's `scene` (string | string[]) to a list. */
+export function sceneList(scene: string | string[]): string[] {
+    return Array.isArray(scene) ? scene : [scene];
 }
 
 /* ------------------------------------------------------------------ */

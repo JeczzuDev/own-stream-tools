@@ -92,7 +92,11 @@ function isActionActive(action, state) {
         case 'obs.record':
             return state.recording;
         case 'obs.sourceVisibility':
-            return state.sourceVisibility[`${action.scene}/${action.source}`] === true;
+        {
+            /* multi-scene: the first scene is the reference (same one toggle reads) */
+            const scene = Array.isArray(action.scene) ? action.scene[0] : action.scene;
+            return state.sourceVisibility[`${scene}/${action.source}`] === true;
+        }
         case 'obs.filter':
             return state.filters[`${action.source}/${action.filter}`] === true;
         default:
